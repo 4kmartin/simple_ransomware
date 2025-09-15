@@ -22,21 +22,17 @@ fn main() {
 fn app() -> Element {
     let time_out = 15; // number of seconds before gotcha is displayed
     let mut show_gotcha = use_signal ( || false );
-    let mut clicked = use_signal ( || false );
     use_effect(move || {
         // set window to full screen
         let window = use_window();
         window.set_fullscreen(true);
+        window.set_always_on_top(true);
     });
 
     use_future( move || async move {
         sleep(Duration::from_secs(time_out)).await;
         show_gotcha.set(true);
-        sleep(Duration::from_secs(time_out)).await;
-        if clicked() {
-            // println!("clicked");
-            report_to_knowbe4().await;
-        }
+        sleep(Duration::from_secs(30)).await;
         let window = use_window();
         window.close();
     });
@@ -51,9 +47,9 @@ fn app() -> Element {
             p { "This device is infected by ransomware. All data of yours encrypted, no you can open it without password"}
             p { "Pay $100,000 in Bitcoin to get password."}
             button {
-                onclick: move |_| {
+                onclick: move |_| async move {
                     show_gotcha.set(true);
-                    clicked.set(true);
+                    report_to_knowbe4().await;
                 },
                 "Pay Now"
             }
@@ -86,18 +82,16 @@ fn app() -> Element {
 fn get_useremail () -> String {
     let domain = std::env!("COMPANY_DOMAIN");
     if let Ok(user) = std::env::var("USERNAME") {
-        return format!("{}@{}",user,domain).to_string();
+        format!("{}@{}",user,domain).to_string()
     } else {
-        return "NONCE".to_string();
+        "NONCE".to_string()
     }
 }
 
 async fn report_to_knowbe4 () {
     let server = format!("{}/events", std::env!("KNOWBE4_SERVER"));
-    let target_user = get_useremail();
-    let event_type = "clicked_pay_ransomware_test".to_string();
     let token = std::env!("KNOWBE4_TOKEN");
-    let body = Knowbe4Data {target_user, event_type};
+    let body = Knowbe4Data::new();
     let client = reqwest::Client::new();
     let response = client.post(server)
         .bearer_auth(token)
@@ -111,5 +105,25 @@ async fn report_to_knowbe4 () {
 #[derive(Serialize, Deserialize, Debug)]
 struct Knowbe4Data {
     target_user: String,
-    event_type: String
+    event_type: String,
+    source: String,
+    description: String,
+    risk_level: i32
+}
+
+impl Knowbe4Data {
+    fn new () -> Knowbe4Data {
+        let target_user = get_useremail();
+        let source = "Simple Ransomware Simulation".to_string();
+        let event_type = "Clicked Ransomware Simulation".to_string();
+        let description = format!("The user ({}) clicked the \"PAY NOW\" button on a simulated ransomware.", target_user).to_string();
+        let risk_level = 10;
+        Knowbe4Data{
+            target_user,
+            event_type,
+            source,
+            description,
+            risk_level
+        }
+    }
 }
