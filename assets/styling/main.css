@@ -172,3 +172,11 @@ body {
 .crt {
 animation: textShadow 1.6s infinite;
 }
+
+ul {
+    list-style-type: none;
+}
+
+li {
+    list-style-type: none;
+}
