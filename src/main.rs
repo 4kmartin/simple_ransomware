@@ -1,12 +1,18 @@
 use dioxus::{desktop::WindowBuilder, prelude::*};
 use dioxus_desktop::{use_window, Config};
-use tokio::{time::sleep, sync::Mutex };
-use std::sync::Arc;
+use tokio::time::sleep;
 use std::time::Duration;
 use serde::{Serialize, Deserialize };
+use rust_embed::RustEmbed;
+use base64::Engine;
 
-const MAIN_CSS: Asset = asset!("/assets/styling/main.css");
-const SKULL: Asset = asset!("/assets/skull.png");
+
+
+#[derive(RustEmbed)]
+#[folder = "assets/"]
+struct Assets;
+
+
 
 fn main() {
     dioxus::LaunchBuilder::new()
@@ -20,8 +26,19 @@ fn main() {
 
 #[component]
 fn app() -> Element {
+
+    let MAIN_CSS= Assets::get("main.css").unwrap();
+    let SKULL= Assets::get("skull.png").unwrap().data;
+
     let time_out = 15; // number of seconds before gotcha is displayed
     let mut show_gotcha = use_signal ( || false );
+    let img_uri = format!(
+        "data:image/png;base64,{}",
+        base64::engine::general_purpose::STANDARD.encode(
+            &SKULL
+        )
+    );
+    let style = String::from_utf8_lossy(MAIN_CSS.data.as_ref());
     use_effect(move || {
         // set window to full screen
         let window = use_window();
@@ -38,42 +55,42 @@ fn app() -> Element {
     });
 
     rsx! {
-        document::Stylesheet {href: MAIN_CSS }
+        style { "{style}" },
         div {
             text_align: "center",
             class: "crt",
-            img { src: SKULL }
-            h1 { "Your Data Has Been Encrypted"}
-            p { "This device is infected by ransomware. All data of yours encrypted, no you can open it without password"}
-            p { "Pay $100,000 in Bitcoin to get password."}
+            img { src: "{img_uri}" },
+            h1 { "Your Data Has Been Encrypted"},
+            p { "This device is infected by ransomware. All data of yours encrypted, no you can open it without password"},
+            p { "Pay $100,000 in Bitcoin to get password."},
             button {
                 onclick: move |_| async move {
                     show_gotcha.set(true);
                     report_to_knowbe4().await;
                 },
                 "Pay Now"
-            }
+            },
             if show_gotcha() {
-                h1 { "Security Training Alert" }
-                p { strong { "this is a simulation" } }
+                h1 { "Security Training Alert" },
+                p { strong { "this is a simulation" } },
                 p {
-                    "The phishing email you clicked on recently could have led to "
-                     strong {"real ransomware."}
+                    "The phishing email you clicked on recently could have led to ",
+                     strong {"real ransomware."},
                      " If this had not been a test, your files and company data might now be locked and held for ransom."
-                }
+                },
                 ul {
-                    li { "Verify links and sender details before clicking"}
-                    li { "Be cautious with unexpected attachments or urgent requests"}
-                    li { "Report suspicious emails to Cyber Security immediately" }
-                }
-                p { "Your awareness is our best defense"}
+                    li { "Verify links and sender details before clicking"},
+                    li { "Be cautious with unexpected attachments or urgent requests"},
+                    li { "Report suspicious emails to Cyber Security immediately" },
+                },
+                p { "Your awareness is our best defense"},
                 button {
                     onclick: move |_| {
                         let window = use_window();
                         window.close();
                     },
                     "Close Window"
-                }
+                },
             }
         }
     }
@@ -93,7 +110,7 @@ async fn report_to_knowbe4 () {
     let token = std::env!("KNOWBE4_TOKEN");
     let body = Knowbe4Data::new();
     let client = reqwest::Client::new();
-    let response = client.post(server)
+    let _response = client.post(server)
         .bearer_auth(token)
         .json(&body)
         .send()
